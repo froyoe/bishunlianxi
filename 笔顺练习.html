@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>写字小课堂</title>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --primary: #5b8ff9; --primary-light: #e8f0fe; --success: #52c41a;
+  --danger: #ff4d4f; --warning: #faad14; --bg: #f0f5ff;
+  --card: #fff; --text: #333; --text-light: #999; --radius: 16px;
+}
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-user-select: none; user-select: none; }
+
+/* 顶部栏 */
+.header { background: linear-gradient(135deg, #5b8ff9, #7b61ff); color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+.header h1 { font-size: 20px; flex: 1; text-align: center; }
+.back-btn { background: rgba(255,255,255,.25); border: none; color: #fff; font-size: 22px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; line-height: 40px; text-align: center; visibility: hidden; }
+.back-btn.show { visibility: visible; }
+.back-btn:active { background: rgba(255,255,255,.4); }
+.sound-btn { background: rgba(255,255,255,.25); border: none; color: #fff; font-size: 18px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; line-height: 36px; text-align: center; }
+.sound-btn:active { background: rgba(255,255,255,.4); }
+.home-btn { background: rgba(255,255,255,.25); border: none; color: #fff; font-size: 20px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; line-height: 40px; text-align: center; visibility: hidden; }
+.home-btn.show { visibility: visible; }
+.home-btn:active { background: rgba(255,255,255,.4); }
+
+.container { max-width: 560px; margin: 0 auto; padding: 12px 16px 32px; }
+
+/* ===== 单元选择 ===== */
+.unit-card { background: var(--card); border-radius: var(--radius); padding: 18px 16px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(91,143,249,.12); display: flex; align-items: center; gap: 14px; transition: transform .15s; }
+.unit-card:active { transform: scale(.97); }
+.unit-icon { font-size: 32px; width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.unit-card h3 { font-size: 18px; font-weight: 600; }
+.unit-card .progress-text { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+.unit-card .arrow { color: #ccc; font-size: 22px; margin-left: auto; }
+/* 进度条 */
+.progress-bar { height: 6px; background: #eee; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.progress-bar .fill { height: 100%; background: linear-gradient(90deg, #52c41a, #73d13d); border-radius: 3px; transition: width .3s; }
+
+/* ===== 生字网格 ===== */
+.lesson-title { font-size: 15px; color: var(--primary); font-weight: 600; margin: 16px 0 8px; padding-left: 4px; }
+.lesson-title:first-child { margin-top: 4px; }
+.char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+.char-cell { background: var(--card); border-radius: 14px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.06); position: relative; border: 3px solid transparent; transition: .15s; }
+.char-cell:active { transform: scale(.93); }
+.char-cell.mastered { border-color: var(--success); background: #f6ffed; }
+.char-cell.struggling { border-color: var(--danger); background: #fff2f0; }
+.char-cell .stars { font-size: 12px; margin-top: 2px; line-height: 1; }
+.char-cell .difficult-dot { position: absolute; top: 5px; right: 5px; font-size: 14px; }
+
+/* ===== 练习页 ===== */
+.practice-page { display: none; flex-direction: column; align-items: center; }
+.practice-header { text-align: center; margin: 16px 0 12px; }
+.practice-header .big-char { font-size: 48px; font-weight: 700; }
+.practice-header .char-tag { display: inline-block; background: #fff0e0; color: #fa8c16; font-size: 13px; padding: 2px 10px; border-radius: 10px; margin-top: 4px; }
+
+/* 田字格 */
+.writer-wrap { position: relative; width: min(320px, 85vw); height: min(320px, 85vw); border: 3px solid #bbb; border-radius: 10px; background: #fff; }
+.writer-wrap .tian-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.writer-wrap .tian-grid::before, .writer-wrap .tian-grid::after {
+  content: ''; position: absolute;
+}
+.writer-wrap .tian-grid::before { top: 50%; left: 0; width: 100%; height: 0; border-top: 1px dashed #d9d9d9; }
+.writer-wrap .tian-grid::after { left: 50%; top: 0; width: 0; height: 100%; border-left: 1px dashed #d9d9d9; }
+/* 对角虚线用 SVG */
+.tian-diag { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.feedback-area { margin-top: 14px; min-height: 60px; text-align: center; }
+.feedback-text { font-size: 22px; font-weight: 700; }
+.feedback-text.correct { color: var(--success); }
+.feedback-text.wrong { color: var(--danger); }
+.feedback-text.hint { color: var(--primary); }
+.feedback-emoji { font-size: 36px; margin-top: 4px; }
+.stats-stars { font-size: 14px; color: var(--text-light); margin-top: 4px; }
+
+/* 大按钮 */
+.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+.btn { padding: 14px 28px; border: none; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; color: #fff; display: flex; align-items: center; gap: 6px; transition: transform .1s; }
+.btn:active { transform: scale(.95); }
+.btn-primary { background: linear-gradient(135deg, #5b8ff9, #7b61ff); }
+.btn-success { background: linear-gradient(135deg, #52c41a, #73d13d); }
+.btn-warning { background: linear-gradient(135deg, #faad14, #ffc53d); color: #333; }
+.btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+.btn-next { background: linear-gradient(135deg, #ff7a45, #ff9c6e); }
+.btn-small { padding: 10px 18px; font-size: 15px; border-radius: 10px; }
+
+/* ===== 总结页 ===== */
+.summary-page { display: none; }
+.summary-header { text-align: center; margin: 20px 0; }
+.summary-header h2 { font-size: 22px; }
+.summary-header .big-emoji { font-size: 48px; margin-bottom: 8px; }
+.summary-header .sub { font-size: 14px; color: var(--text-light); margin-top: 4px; }
+.summary-list { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.summary-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f5f5f5; }
+.summary-item:last-child { border-bottom: none; }
+.summary-item .ch { font-size: 32px; width: 52px; text-align: center; }
+.summary-item .info { flex: 1; font-size: 14px; color: var(--text-light); padding-left: 8px; }
+.summary-item .badge { padding: 5px 12px; border-radius: 14px; font-size: 13px; font-weight: 600; }
+.badge-star { background: #f6ffed; color: var(--success); }
+.badge-try { background: #fff7e6; color: #fa8c16; }
+.badge-new { background: #f0f5ff; color: var(--primary); }
+.badge-hard { background: #fff2f0; color: var(--danger); }
+
+/* ===== 庆祝动画 ===== */
+.celebrate { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+.confetti { position: absolute; width: 10px; height: 10px; border-radius: 2px; animation: confetti-fall 1.5s ease-out forwards; }
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translateY(80vh) rotate(720deg) scale(0.5); }
+}
+
+/* 页面切换动画 */
+.fade-in { animation: fadeIn .25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 错误提示动画 */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+
+/* 页面隐藏 */
+.page-hidden { display: none !important; }
+
+/* 底部安全区 */
+.bottom-safe { height: env(safe-area-inset-bottom, 20px); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" id="backBtn" onclick="goBack()">&#8592;</button>
+  <h1 id="headerTitle">&#9997;&#65039; 写字小课堂</h1>
+  <button class="sound-btn" id="soundBtn" onclick="toggleSound()">&#128264;</button>
+  <button class="home-btn" id="homeBtn" onclick="renderUnits()">&#127968;</button>
+</div>
+
+<div class="container" id="mainContainer">
+  <div id="unitList"></div>
+
+  <div id="charPage" class="page-hidden"></div>
+
+  <div class="practice-page page-hidden" id="practicePage">
+    <div class="practice-header" id="practiceHeader"></div>
+    <div class="writer-wrap" id="writerWrap">
+      <div class="tian-grid"></div>
+      <svg class="tian-diag" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#e8e8e8" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#e8e8e8" stroke-width="0.5" stroke-dasharray="3,3"/>
+      </svg>
+      <div id="writerTarget"></div>
+    </div>
+    <div class="feedback-area" id="feedbackArea"></div>
+    <div class="stats-stars" id="statsStars"></div>
+    <div class="btn-row" id="practiceButtons"></div>
+  </div>
+
+  <div class="summary-page page-hidden" id="summaryPage"></div>
+</div>
+<div class="bottom-safe"></div>
+
+<script>
+// ===== 音效引擎（Web Audio API，无需外部文件）=====
+let soundEnabled = localStorage.getItem('bishun_sound') !== 'off';
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('bishun_sound', soundEnabled ? 'on' : 'off');
+  document.getElementById('soundBtn').innerHTML = soundEnabled ? '&#128264;' : '&#128263;';
+  if (soundEnabled) SFX.tap();
+}
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+// iOS 需要用户交互才能激活 AudioContext
+document.addEventListener('touchstart', ensureAudio, { once: true });
+document.addEventListener('click', ensureAudio, { once: true });
+
+function playTone(freq, duration, type, vol, delay) {
+  if (!soundEnabled) return;
+  const ctx = ensureAudio();
+  const t = ctx.currentTime + (delay || 0);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(vol || 0.3, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + duration);
+}
+
+const SFX = {
+  // 点击按钮/卡片：轻快短促
+  tap() { playTone(800, 0.08, 'sine', 0.15); },
+
+  // 写对一笔：清脆上扬
+  correct() { playTone(880, 0.12, 'sine', 0.25); playTone(1100, 0.15, 'sine', 0.2, 0.08); },
+
+  // 写错一笔：低沉柔和
+  wrong() { playTone(300, 0.2, 'triangle', 0.2); playTone(250, 0.25, 'triangle', 0.15, 0.1); },
+
+  // 全部正确完成：欢快上行旋律
+  perfect() {
+    playTone(523, 0.15, 'sine', 0.25);        // C5
+    playTone(659, 0.15, 'sine', 0.25, 0.12);   // E5
+    playTone(784, 0.15, 'sine', 0.25, 0.24);   // G5
+    playTone(1047, 0.3, 'sine', 0.3, 0.36);    // C6
+  },
+
+  // 完成但有错误：温和两声
+  done() { playTone(523, 0.18, 'sine', 0.2); playTone(659, 0.22, 'sine', 0.2, 0.15); },
+
+  // 笔顺动画看完：叮
+  ready() { playTone(1047, 0.2, 'sine', 0.15); playTone(1319, 0.25, 'sine', 0.12, 0.12); },
+};
+
+// ===== 语音播报（SpeechSynthesis）=====
+function speak(text, rate) {
+  if (!soundEnabled || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = rate || 0.85;
+  u.volume = 1;
+  speechSynthesis.speak(u);
+}
+// 不打断当前语音，追加到队列
+function speakQueue(text, rate) {
+  if (!soundEnabled || !window.speechSynthesis) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = rate || 0.8;
+  u.volume = 1;
+  speechSynthesis.speak(u);
+}
+
+// ===== 笔画名称识别 =====
+let currentStrokeNames = [];
+let strokeSpeechTimers = [];
+// 笔画数据缓存（避免重复请求）
+const strokeCache = new Map();
+
+function clearStrokeSpeech() {
+  strokeSpeechTimers.forEach(t => clearTimeout(t));
+  strokeSpeechTimers = [];
+  if (window.speechSynthesis) speechSynthesis.cancel();
+}
+
+// 带重试和缓存的网络请求（兼容旧浏览器）
+async function fetchWithRetry(url, retries = 3, delay = 1000) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('请求超时')), 5000);
+  });
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const fetchPromise = fetch(url).then(resp => {
+        clearTimeout(timeoutId);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      });
+      
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
+      return result;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, delay * (i + 1))); // 递增延迟
+    }
+  }
+}
+
+// 检查localStorage配额
+function checkStorageQuota() {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      return false;
+    }
+    return true;
+  }
+}
+
+// 显示错误提示（避免重复提示）
+let currentErrorDiv = null;
+function showError(message, duration = 3000) {
+  // 清除之前的错误提示
+  if (currentErrorDiv) {
+    currentErrorDiv.remove();
+    currentErrorDiv = null;
+  }
+  
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'error-toast';
+  errorDiv.style.cssText = `
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    background: #ff4d4f; color: #fff; padding: 12px 20px;
+    border-radius: 8px; z-index: 1000; font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideDown 0.3s ease;
+    max-width: 90%; word-wrap: break-word;
+  `;
+  errorDiv.textContent = message;
+  document.body.appendChild(errorDiv);
+  currentErrorDiv = errorDiv;
+  
+  setTimeout(() => {
+    if (currentErrorDiv === errorDiv) {
+      errorDiv.style.animation = 'slideUp 0.3s ease';
+      setTimeout(() => {
+        if (currentErrorDiv === errorDiv) {
+          errorDiv.remove();
+          currentErrorDiv = null;
+        }
+      }, 300);
+    }
+  }, duration);
+}
+
+// 从 HanziWriter CDN 获取字的 median 数据，识别笔画名称（带缓存和错误处理）
+async function loadStrokeNames(ch) {
+  // 先检查缓存
+  if (strokeCache.has(ch)) {
+    currentStrokeNames = strokeCache.get(ch);
+    return;
+  }
+
+  try {
+    const url = 'https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0/' + encodeURIComponent(ch) + '.json';
+    const data = await fetchWithRetry(url);
+    currentStrokeNames = data.medians.map(classifyStroke);
+    // 缓存结果（限制缓存大小，避免内存溢出）
+    if (strokeCache.size < 100) {
+      strokeCache.set(ch, currentStrokeNames);
+    }
+  } catch (e) {
+    console.error('加载笔画数据失败:', e);
+    currentStrokeNames = [];
+    // 网络错误时给出友好提示
+    if (!navigator.onLine) {
+      showError('📡 网络未连接，请检查网络后重试');
+    } else {
+      showError('⚠️ 加载笔画数据失败，请稍后重试');
+    }
+  }
+}
+
+// 根据 median 坐标点序列推断笔画类型
+// HanziWriter 数据使用数学坐标系（y 轴向上），需翻转 y 才是书写视觉方向
+function classifyStroke(median) {
+  if (!median || median.length < 2) return '点';
+
+  // 整体位移（翻转 y 转为屏幕坐标）
+  const tdx = median[median.length - 1][0] - median[0][0];
+  const tdy = -(median[median.length - 1][1] - median[0][1]);
+  const tlen = Math.sqrt(tdx * tdx + tdy * tdy);
+  
+  // 点的判断：长度很短 → 一定是点
+  if (tlen < 35 && median.length <= 5) return '点';
+
+  // 分析笔画路径，找出所有转折点
+  const segments = [];
+  for (let i = 1; i < median.length; i++) {
+    const dx = median[i][0] - median[i-1][0];
+    const dy = -(median[i][1] - median[i-1][1]);
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len > 15) { // 忽略太小的片段
+      segments.push({ dx, dy, len, idx: i });
+    }
+  }
+
+  if (segments.length === 0) return '点';
+
+  // 检测转折点（角度变化大的地方）
+  const turns = [];
+  for (let i = 1; i < segments.length; i++) {
+    const a1 = Math.atan2(segments[i-1].dy, segments[i-1].dx);
+    const a2 = Math.atan2(segments[i].dy, segments[i].dx);
+    let diff = Math.abs(a2 - a1);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    const deg = diff * 180 / Math.PI;
+    if (deg > 40) { // 转折角度大于40度
+      turns.push({ idx: segments[i].idx, angle: deg });
+    }
+  }
+
+  // 无转折或转折很小 → 简单笔画
+  if (turns.length === 0) {
+    return dirName(tdx, tdy, tlen);
+  }
+
+  // 有转折 → 复合笔画
+  // 分析主要转折点前后的方向
+  const firstSeg = segments[0];
+  const lastSeg = segments[segments.length - 1];
+  const d1 = getDirection(firstSeg.dx, firstSeg.dy, false);
+  const d2 = getDirection(lastSeg.dx, lastSeg.dy, false);
+  
+  // 检查末段是否向上（钩的特征）
+  const isHook = lastSeg.dy < -10 && Math.abs(lastSeg.dx) < Math.abs(lastSeg.dy) * 0.8;
+  const isUpward = lastSeg.dy < 0;
+
+  // 特殊复合笔画识别
+  // 1. 钩类（末段向上/左上）
+  if (isHook || d2 === '提') {
+    if (d1 === '竖') {
+      // 竖弯钩：竖+横+提
+      if (turns.length >= 2) {
+        const midIdx = Math.floor(segments.length / 2);
+        const midSeg = segments[midIdx];
+        const midDir = getDirection(midSeg.dx, midSeg.dy, false);
+        if (midDir === '横') return '竖弯钩';
+      }
+      // 竖提 vs 竖钩：竖提末段向右上(dx>0)，竖钩末段向左上(dx<=0)
+      if (lastSeg.dx > 15) return '竖提';
+      return '竖钩';
+    }
+    if (d1 === '横') {
+      // 横钩 vs 横折钩：横钩是横+提；横折钩是横+竖+提
+      if (turns.length >= 2) return '横折钩';
+      return '横钩';
+    }
+    if (d1 === '撇') {
+      // 斜钩 vs 撇折：检查是否有横段
+      if (turns.length >= 2) {
+        const midSeg = segments[Math.floor(segments.length / 2)];
+        const midDir = getDirection(midSeg.dx, midSeg.dy, false);
+        if (midDir === '横') return '撇折';
+      }
+      return '斜钩';
+    }
+    if (d1 === '捺') return '卧钩';
+    return d1 + '钩';
+  }
+
+  // 2. 横折类
+  if (d1 === '横') {
+    if (d2 === '竖') {
+      // 横折 vs 横折折 vs 横折折钩
+      if (turns.length >= 3 && isUpward) return '横折折钩';
+      if (turns.length >= 2) return '横折折';
+      return '横折';
+    }
+    if (d2 === '撇') return '横撇';
+    if (d2 === '提' || isUpward) return '横钩';
+    if (d2 === '捺') {
+      if (turns.length >= 2) return '横折折';
+      return '横折';
+    }
+  }
+
+  // 3. 竖折类
+  if (d1 === '竖') {
+    if (d2 === '横') {
+      // 竖折 vs 竖折折 vs 竖折折钩
+      if (turns.length >= 3 && isUpward) return '竖折折钩';
+      if (turns.length >= 2) return '竖折折';
+      return '竖折';
+    }
+    // 竖弯、竖弯钩：竖后带弯，末段可能横或提
+    if (d2 === '横' && turns.length >= 1) {
+      if (isHook || isUpward) return '竖弯钩';
+      return '竖弯';
+    }
+    if (d2 === '撇') {
+      if (isUpward) return '竖弯钩';
+      return '竖弯';
+    }
+    if (d2 === '提' || isHook) return '竖钩';
+  }
+
+  // 4. 撇折类
+  if (d1 === '撇') {
+    if (d2 === '横' || d2 === '提') return '撇折';
+    if (d2 === '点' || d2 === '捺') return '撇点';
+    if (d2 === '竖') return '撇折';
+  }
+
+  // 5. 捺点
+  if (d1 === '捺' && d2 === '点') return '捺点';
+
+  // 6. 竖弯钩（竖后接横再向上）- 已在上面处理
+
+  // 默认：返回主要方向+折
+  return d1 + '折';
+}
+
+// 获取方向（用于复合笔画分析，不区分点/捺）
+function getDirection(dx, dy, useLength = true) {
+  const a = Math.atan2(dy, dx) * 180 / Math.PI;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  
+  // 提：-50° ~ -18°（向上偏左，先判断避免与横重叠）
+  if (a >= -50 && a < -18) return '提';
+  
+  // 横：-28° ~ 28°（水平方向）
+  if (a >= -28 && a <= 28) return '横';
+  
+  // 竖：58° ~ 122° 或 -122° ~ -58°（垂直方向）
+  if ((a >= 58 && a <= 122) || (a <= -58 && a >= -122)) return '竖';
+  
+  // 撇：122° ~ 180° 或 -180° ~ -152°（左下）
+  if ((a >= 122 && a <= 180) || (a <= -152 && a >= -180)) return '撇';
+  
+  // 捺：28° ~ 58°（右下）
+  if (a >= 28 && a < 58) {
+    if (useLength && len < 200) return '点';
+    return '捺';
+  }
+  
+  // 点：-18° ~ 28° 且长度短（右上短笔画）
+  if (a >= -18 && a < 28 && useLength && len < 200) return '点';
+  
+  // 默认根据角度判断
+  if (a > 0 && a < 90) {
+    return useLength && len < 180 ? '点' : '捺';
+  }
+  if (a >= 90 || a <= -90) return '撇';
+  return '竖';
+}
+
+// 屏幕坐标方向名（考虑长度区分点/捺）
+function dirName(dx, dy, len) {
+  if (len === undefined) len = Math.sqrt(dx * dx + dy * dy);
+  return getDirection(dx, dy, true);
+}
+
+// ===== 生字数据 =====
+const UNITS = [
+  { name: '识字一', icon: '📖', color: '#e8f5e9', lessons: [
+    { title: '1 天地人', chars: '一二三四五上下' },
+    { title: '2 金木水火土', chars: '口耳目手足站坐' },
+    { title: '3 口耳目', chars: '日月水火山石田禾' },
+    { title: '4 日月水火', chars: '对云雨风花鸟虫' },
+    { title: '5 对韵歌', chars: '六七八九十' },
+  ]},
+  { name: '课文一', icon: '🌿', color: '#e3f2fd', lessons: [
+    { title: '1 秋天', chars: '了子人大' },
+    { title: '2 小小的船', chars: '月儿头里' },
+    { title: '3 江南', chars: '可东西' },
+    { title: '4 四季', chars: '天四是' },
+  ]},
+  { name: '识字二', icon: '🎒', color: '#fff3e0', lessons: [
+    { title: '5 画', chars: '水去来不' },
+    { title: '6 大小多少', chars: '小少牛果鸟' },
+    { title: '7 小书包', chars: '早书刀尺本' },
+    { title: '8 日月明', chars: '木林土力心' },
+    { title: '9 升国旗', chars: '中五立正' },
+  ]},
+  { name: '课文二', icon: '🌈', color: '#fce4ec', lessons: [
+    { title: '5 影子', chars: '在后我好' },
+    { title: '6 比尾巴', chars: '长比巴把' },
+    { title: '7 青蛙写诗', chars: '下个雨们' },
+    { title: '8 雨点儿', chars: '问有半从你' },
+  ]},
+  { name: '课文三', icon: '⭐', color: '#f3e5f5', lessons: [
+    { title: '9 明天要远足', chars: '才明同学' },
+    { title: '10 大还是小', chars: '自己衣' },
+    { title: '11 项链', chars: '白的又和' },
+  ]},
+  { name: '课文四', icon: '🎄', color: '#e8eaf6', lessons: [
+    { title: '12 雪地里的小画家', chars: '竹牙马用几' },
+    { title: '13 乌鸦喝水', chars: '石多出见' },
+    { title: '14 小蜗牛', chars: '对妈全回' },
+  ]},
+];
+
+const DIFFICULT_CHARS = new Set('里头东西四果书尺半从问有才同衣竹马几出回全'.split(''));
+
+// ===== 状态 =====
+let currentView = 'units';
+let currentUnit = null;
+let currentChar = null;
+let currentCharList = []; // 当前单元所有字，方便"下一个"
+let currentCharIndex = -1;
+let writer = null;
+let quizActive = false;
+
+// ===== localStorage =====
+const STORAGE_KEY = 'bishun_records';
+const STORAGE_VERSION = '1.0'; // 数据版本号，用于未来迁移
+
+function loadRecords() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return {};
+    const parsed = JSON.parse(data);
+    // 检查版本，未来可用于数据迁移
+    if (parsed._version !== STORAGE_VERSION) {
+      // 这里可以添加版本迁移逻辑
+    }
+    return parsed;
+  } catch (e) {
+    console.error('读取学习记录失败:', e);
+    if (e.name === 'QuotaExceededError') {
+      showError('💾 存储空间不足，请清理浏览器缓存');
+    }
+    return {};
+  }
+}
+
+function saveRecords(r) {
+  try {
+    // 检查存储配额
+    if (!checkStorageQuota()) {
+      showError('💾 存储空间不足，无法保存学习记录');
+      return false;
+    }
+    r._version = STORAGE_VERSION;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(r));
+    return true;
+  } catch (e) {
+    console.error('保存学习记录失败:', e);
+    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      showError('💾 存储空间不足，请清理浏览器缓存后重试');
+    } else {
+      showError('⚠️ 保存失败，请重试');
+    }
+    return false;
+  }
+}
+
+function getCharRecord(ch) {
+  const r = loadRecords();
+  return r[ch] || { attempts: 0, correct: 0 };
+}
+
+function recordResult(ch, isCorrect) {
+  const r = loadRecords();
+  if (!r[ch]) r[ch] = { attempts: 0, correct: 0 };
+  r[ch].attempts++;
+  if (isCorrect) r[ch].correct++;
+  const saved = saveRecords(r);
+  if (!saved) {
+    // 保存失败时，尝试清理旧数据
+    try {
+      const allChars = UNITS.flatMap(u => u.lessons.flatMap(l => l.chars.split('')));
+      const oldChars = Object.keys(r).filter(k => k !== '_version' && !allChars.includes(k));
+      oldChars.forEach(k => delete r[k]);
+      saveRecords(r);
+    } catch (e) {
+      console.error('清理旧数据失败:', e);
+    }
+  }
+}
+
+// ===== 星星等级 =====
+function getStars(rec) {
+  if (rec.attempts === 0) return '';
+  const rate = rec.correct / rec.attempts;
+  if (rate >= 0.8) return '⭐⭐⭐';
+  if (rate >= 0.5) return '⭐⭐';
+  return '⭐';
+}
+function getStarLabel(rec) {
+  if (rec.attempts === 0) return '还没练过';
+  const rate = Math.round(rec.correct / rec.attempts * 100);
+  const stars = getStars(rec);
+  return `${stars} 练了${rec.attempts}次`;
+}
+
+function showNav(show) {
+  const m = show ? 'add' : 'remove';
+  document.getElementById('backBtn').classList[m]('show');
+  document.getElementById('homeBtn').classList[m]('show');
+}
+
+// ===== 页面切换 =====
+function showOnly(id) {
+  ['unitList','charPage','practicePage','summaryPage'].forEach(k => {
+    document.getElementById(k).classList.add('page-hidden');
+  });
+  const el = document.getElementById(id);
+  el.classList.remove('page-hidden');
+  if (id === 'practicePage') el.style.display = 'flex';
+  else el.style.display = '';
+  el.classList.remove('fade-in');
+  void el.offsetWidth;
+  el.classList.add('fade-in');
+}
+
+// ===== 单元列表 =====
+function renderUnits() {
+  currentView = 'units';
+  showNav(false);
+  document.getElementById('headerTitle').innerHTML = '&#9997;&#65039; 写字小课堂';
+  showOnly('unitList');
+
+  const records = loadRecords();
+  document.getElementById('unitList').innerHTML = UNITS.map((u, i) => {
+    const allChars = u.lessons.flatMap(l => l.chars.split(''));
+    const practiced = allChars.filter(c => records[c] && records[c].attempts > 0).length;
+    const pct = allChars.length ? Math.round(practiced / allChars.length * 100) : 0;
+    return `<div class="unit-card" onclick="openUnit(${i})">
+      <div class="unit-icon" style="background:${u.color}">${u.icon}</div>
+      <div style="flex:1">
+        <h3>${u.name}</h3>
+        <div class="progress-text">已练 ${practiced}/${allChars.length} 个字</div>
+        <div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>
+      </div>
+      <span class="arrow">›</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== 生字网格 =====
+function openUnit(idx) {
+  currentView = 'chars';
+  currentUnit = idx;
+  const unit = UNITS[idx];
+  showNav(true);
+  document.getElementById('headerTitle').textContent = unit.icon + ' ' + unit.name;
+  showOnly('charPage');
+
+  // 构建当前单元字列表
+  currentCharList = unit.lessons.flatMap(l => l.chars.split(''));
+
+  const records = loadRecords();
+  let html = '';
+  unit.lessons.forEach(lesson => {
+    html += `<div class="lesson-title">${lesson.title}</div><div class="char-grid">`;
+    lesson.chars.split('').forEach(ch => {
+      const rec = records[ch] || { attempts: 0, correct: 0 };
+      const stars = getStars(rec);
+      const rate = rec.attempts > 0 ? rec.correct / rec.attempts : -1;
+      let cls = '';
+      if (rate >= 0.8) cls = 'mastered';
+      else if (rate >= 0 && rate < 0.5) cls = 'struggling';
+      const dot = DIFFICULT_CHARS.has(ch) ? '<span class="difficult-dot">&#128293;</span>' : '';
+      html += `<div class="char-cell ${cls}" onclick="openPractice('${ch}')">
+        ${dot}${ch}<span class="stars">${stars}</span></div>`;
+    });
+    html += '</div>';
+  });
+  // 计算薄弱字（正确率<50%且练习过）
+  const allChars = unit.lessons.flatMap(l => l.chars.split(''));
+  const weakChars = allChars.filter(ch => {
+    const rec = records[ch];
+    if (!rec || rec.attempts === 0) return false;
+    const rate = rec.correct / rec.attempts;
+    return rate < 0.5;
+  });
+
+  html += `<div class="btn-row" style="margin-top:24px">
+    <button class="btn btn-warning btn-small" onclick="showSummary()">&#128202; 看看掌握情况</button>
+    ${weakChars.length > 0 ? `<button class="btn btn-danger btn-small" onclick="reviewWeakChars(${JSON.stringify(weakChars)})">&#128293; 复习薄弱字 (${weakChars.length})</button>` : ''}
+  </div>`;
+  document.getElementById('charPage').innerHTML = html;
+}
+
+// ===== 练习页 =====
+async function openPractice(ch) {
+  currentView = 'practice';
+  currentChar = ch;
+  // 更新索引（复习模式使用reviewCharIndex，普通模式使用currentCharIndex）
+  if (reviewMode) {
+    currentCharIndex = reviewCharIndex;
+  } else {
+    currentCharIndex = currentCharList.indexOf(ch);
+  }
+  quizActive = false;
+  clearStrokeSpeech();
+  showNav(true);
+  const titlePrefix = reviewMode ? '📚 复习：' : '练习：';
+  document.getElementById('headerTitle').textContent = titlePrefix + ch;
+  showOnly('practicePage');
+
+  // 头部
+  const diff = DIFFICULT_CHARS.has(ch) ? '<span class="char-tag">&#128293; 易错字，要多练</span>' : '';
+  document.getElementById('practiceHeader').innerHTML = `<div class="big-char">${ch}</div>${diff}`;
+
+  // 统计
+  updateStatsStars(ch);
+
+  // 按钮：初始状态
+  renderPracticeButtons('init');
+
+  // 清空反馈
+  document.getElementById('feedbackArea').innerHTML = '<div class="feedback-text hint">&#128264; 听一听，看一看…</div>';
+
+  // 加载笔画数据（异步，不阻塞，带缓存和错误处理）
+  try {
+    await loadStrokeNames(ch);
+  } catch (e) {
+    console.error('加载笔画数据异常:', e);
+    // 错误已在loadStrokeNames中处理，这里继续执行
+  }
+
+  // 先读字音
+  speak(ch, 0.7);
+
+  // 创建 Writer
+  const wrap = document.getElementById('writerWrap');
+  const size = Math.min(320, wrap.clientWidth) - 6;
+  document.getElementById('writerTarget').innerHTML = '';
+  writer = HanziWriter.create('writerTarget', ch, {
+    width: size, height: size, padding: 10,
+    showOutline: true, showCharacter: false,
+    strokeAnimationSpeed: 1, delayBetweenStrokes: 1200,
+    strokeColor: '#333', outlineColor: '#ddd',
+    drawingColor: '#5b8ff9', drawingWidth: 8,
+    showHintAfterMisses: 2,
+    highlightOnComplete: true,
+    highlightColor: '#52c41a',
+  });
+
+  // 等字音播完后开始动画（约800ms后）
+  setTimeout(() => {
+    if (currentChar !== ch) return; // 已切换到别的字
+    animateWithStrokeNames();
+  }, 900);
+}
+
+// 播放笔顺动画，同时报读每一笔的笔画名称
+function animateWithStrokeNames() {
+  if (!writer) return;
+  clearStrokeSpeech();
+
+  const names = currentStrokeNames;
+  // 估算每笔时间：动画约 400ms + 间隔 1200ms = 1600ms
+  const INTERVAL = 1600;
+
+  // 在每笔开始时报笔画名
+  if (names.length > 0) {
+    names.forEach((name, i) => {
+      const t = setTimeout(() => {
+        speakQueue(name, 0.8);
+        // 同时更新反馈区显示笔画名
+        document.getElementById('feedbackArea').innerHTML =
+          `<div class="feedback-text hint">第${i + 1}笔：${name}</div>`;
+      }, i * INTERVAL);
+      strokeSpeechTimers.push(t);
+    });
+  }
+
+  writer.animateCharacter({
+    onComplete: () => {
+      SFX.ready();
+      // 动画结束后显示笔画总结
+      const summary = names.length > 0
+        ? `<div style="font-size:14px;color:var(--text-light);margin-top:4px">笔顺：${names.join(' - ')}</div>`
+        : '';
+      document.getElementById('feedbackArea').innerHTML =
+        `<div class="feedback-text hint">&#128079; 看完啦！点下面按钮自己写写看</div>${summary}`;
+      renderPracticeButtons('ready');
+    }
+  });
+}
+
+function renderPracticeButtons(state) {
+  const el = document.getElementById('practiceButtons');
+  let hasNext = false;
+  if (reviewMode) {
+    hasNext = reviewCharIndex >= 0 && reviewCharIndex < reviewCharList.length - 1;
+  } else {
+    hasNext = currentCharIndex >= 0 && currentCharIndex < currentCharList.length - 1;
+  }
+  
+  if (state === 'init') {
+    el.innerHTML = `<button class="btn btn-primary btn-small" onclick="playAnimation()">&#128065; 再看一遍</button>`;
+  } else if (state === 'ready') {
+    el.innerHTML = `
+      <button class="btn btn-success" onclick="startQuiz()">&#9997;&#65039; 我来写！</button>
+      <button class="btn btn-outline btn-small" onclick="playAnimation()">&#128065; 再看一遍</button>`;
+  } else if (state === 'quizzing') {
+    el.innerHTML = `<button class="btn btn-outline btn-small" onclick="resetChar()">&#128260; 重新写</button>`;
+  } else if (state === 'done') {
+    const reviewBadge = reviewMode ? `<span style="font-size:12px;background:#ff4d4f;color:#fff;padding:2px 8px;border-radius:10px;margin-left:8px">复习模式</span>` : '';
+    el.innerHTML = `
+      <button class="btn btn-success btn-small" onclick="startQuiz()">&#9997;&#65039; 再写一次</button>
+      <button class="btn btn-outline btn-small" onclick="playAnimation()">&#128065; 看笔顺</button>
+      ${hasNext ? `<button class="btn btn-next btn-small" onclick="nextChar()">&#128073; 下一个字</button>${reviewBadge}` : reviewBadge}`;
+  }
+}
+
+function playAnimation() {
+  if (!writer) return;
+  SFX.tap();
+  quizActive = false;
+  // 先读一遍字音
+  speak(currentChar, 0.7);
+  document.getElementById('feedbackArea').innerHTML = '<div class="feedback-text hint">&#128064; 仔细看哦…</div>';
+  writer.hideCharacter();
+  setTimeout(() => animateWithStrokeNames(), 700);
+}
+
+function startQuiz() {
+  if (!writer) return;
+  SFX.tap();
+  quizActive = true;
+  document.getElementById('feedbackArea').innerHTML =
+    '<div class="feedback-text hint">&#128221; 用手指按顺序写吧！</div>';
+  renderPracticeButtons('quizzing');
+  writer.hideCharacter();
+  writer.quiz({
+    onMistake(sd) {
+      SFX.wrong();
+      const expected = currentStrokeNames[sd.strokeNum] || '';
+      const hint = expected ? `，这一笔是${expected}` : '';
+      document.getElementById('feedbackArea').innerHTML =
+        `<div class="feedback-text wrong">&#128528; 不太对${hint}，再试试</div>`;
+    },
+    onCorrectStroke(sd) {
+      SFX.correct();
+      const sName = currentStrokeNames[sd.strokeNum] || '';
+      const encourages = ['&#128077; 对啦！', '&#127775; 真棒！', '&#128522; 没错！', '&#128170; 继续！', '&#10004;&#65039; 很好！'];
+      const msg = encourages[sd.strokeNum % encourages.length];
+      const nameTag = sName ? `<div style="font-size:15px;color:var(--text-light);margin-top:2px">${sName}</div>` : '';
+      document.getElementById('feedbackArea').innerHTML =
+        `<div class="feedback-text correct">${msg}</div>${nameTag}`;
+      if (sName) speakQueue(sName, 0.9);
+    },
+    onComplete(summary) {
+      quizActive = false;
+      const ok = summary.totalMistakes === 0;
+      recordResult(currentChar, ok);
+      updateStatsStars(currentChar);
+      renderPracticeButtons('done');
+      if (ok) {
+        SFX.perfect();
+        document.getElementById('feedbackArea').innerHTML =
+          `<div class="feedback-emoji">&#127881;&#127881;&#127881;</div>
+           <div class="feedback-text correct">太棒了！全部正确！</div>`;
+        celebrate();
+      } else if (summary.totalMistakes <= 2) {
+        SFX.done();
+        document.getElementById('feedbackArea').innerHTML =
+          `<div class="feedback-emoji">&#128170;</div>
+           <div class="feedback-text" style="color:#fa8c16">不错哦，再练练就更好了！</div>`;
+      } else {
+        SFX.done();
+        document.getElementById('feedbackArea').innerHTML =
+          `<div class="feedback-emoji">&#128588;</div>
+           <div class="feedback-text" style="color:var(--primary)">加油！多看几遍笔顺再写</div>`;
+      }
+    }
+  });
+}
+
+function resetChar() { if (currentChar) openPractice(currentChar); }
+
+// ===== 薄弱字复习模式 =====
+let reviewMode = false;
+let reviewCharList = [];
+let reviewCharIndex = -1;
+
+function reviewWeakChars(chars) {
+  if (!chars || chars.length === 0) {
+    showError('没有需要复习的薄弱字', 2000);
+    return;
+  }
+  
+  reviewMode = true;
+  reviewCharList = chars;
+  reviewCharIndex = 0;
+  
+  // 显示复习模式提示
+  showError(`📚 开始复习 ${chars.length} 个薄弱字`, 2000);
+  
+  // 开始复习第一个字
+  openPractice(chars[0]);
+  
+  // 更新当前字符列表，以便"下一个"按钮正常工作
+  currentCharList = chars;
+  currentCharIndex = 0;
+}
+
+// 修改nextChar函数以支持复习模式
+function nextChar() {
+  if (reviewMode && reviewCharIndex < reviewCharList.length - 1) {
+    reviewCharIndex++;
+    currentCharIndex = reviewCharIndex;
+    openPractice(reviewCharList[reviewCharIndex]);
+  } else if (!reviewMode && currentCharIndex < currentCharList.length - 1) {
+    currentCharIndex++;
+    openPractice(currentCharList[currentCharIndex]);
+  } else if (reviewMode && reviewCharIndex >= reviewCharList.length - 1) {
+    // 复习完成
+    reviewMode = false;
+    showError('🎉 薄弱字复习完成！', 3000);
+    // 返回单元页面
+    setTimeout(() => {
+      if (currentUnit !== null) {
+        openUnit(currentUnit);
+      }
+    }, 1500);
+  }
+}
+
+function updateStatsStars(ch) {
+  const rec = getCharRecord(ch);
+  document.getElementById('statsStars').textContent = getStarLabel(rec);
+}
+
+// ===== 庆祝撒花 =====
+function celebrate() {
+  const container = document.createElement('div');
+  container.className = 'celebrate';
+  document.body.appendChild(container);
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#20c997'];
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + '%';
+    c.style.top = -10 + 'px';
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.animationDelay = Math.random() * 0.5 + 's';
+    c.style.width = (6 + Math.random() * 8) + 'px';
+    c.style.height = (6 + Math.random() * 8) + 'px';
+    container.appendChild(c);
+  }
+  setTimeout(() => container.remove(), 2200);
+}
+
+// ===== 总结页 =====
+function showSummary() {
+  if (currentUnit === null) return;
+  currentView = 'summary';
+  const unit = UNITS[currentUnit];
+  showOnly('summaryPage');
+
+  const records = loadRecords();
+  const allChars = unit.lessons.flatMap(l => l.chars.split(''));
+  const mastered = allChars.filter(c => { const r = records[c]; return r && r.attempts > 0 && r.correct / r.attempts >= 0.8; }).length;
+  const practiced = allChars.filter(c => records[c] && records[c].attempts > 0).length;
+
+  let emoji = '&#128170;';
+  let comment = '继续加油！';
+  if (mastered === allChars.length) { emoji = '&#127942;'; comment = '全部掌握了，你真厉害！'; }
+  else if (mastered > allChars.length * 0.6) { emoji = '&#127775;'; comment = '学得很好，再练练就全会了！'; }
+  else if (practiced > 0) { emoji = '&#128522;'; comment = '有进步哦，继续练习！'; }
+  else { emoji = '&#128075;'; comment = '开始练习吧！'; }
+
+  let html = `<div class="summary-header">
+    <div class="big-emoji">${emoji}</div>
+    <h2>${unit.name}</h2>
+    <div class="sub">${comment} 已掌握 ${mastered}/${allChars.length} 个字</div>
+  </div><div class="summary-list">`;
+
+  allChars.forEach(ch => {
+    const rec = records[ch] || { attempts: 0, correct: 0 };
+    const stars = getStars(rec);
+    let badge, info;
+    if (rec.attempts === 0) {
+      badge = '<span class="badge badge-new">&#128218; 还没练</span>';
+      info = '';
+    } else {
+      const rate = rec.correct / rec.attempts;
+      info = `练了${rec.attempts}次 ${stars}`;
+      if (rate >= 0.8) badge = '<span class="badge badge-star">&#127775; 掌握了</span>';
+      else if (rate >= 0.5) badge = '<span class="badge badge-try">&#128170; 还要练</span>';
+      else badge = '<span class="badge badge-hard">&#128293; 多练练</span>';
+    }
+    const diff = DIFFICULT_CHARS.has(ch) ? ' <span style="font-size:12px">&#128293;易错</span>' : '';
+    html += `<div class="summary-item" onclick="openPractice('${ch}')" style="cursor:pointer">
+      <span class="ch">${ch}</span><span class="info">${info}${diff}</span>${badge}</div>`;
+  });
+
+  html += `</div><div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-primary btn-small" onclick="goBack()">&#128072; 返回</button>
+  </div>`;
+  document.getElementById('summaryPage').innerHTML = html;
+}
+
+// ===== 导航 =====
+function goBack() {
+  clearStrokeSpeech();
+  // 退出复习模式
+  if (reviewMode) {
+    reviewMode = false;
+    reviewCharList = [];
+    reviewCharIndex = -1;
+  }
+  if (currentView === 'practice' && currentUnit !== null) {
+    openUnit(currentUnit);
+  } else if (currentView === 'summary' && currentUnit !== null) {
+    openUnit(currentUnit);
+  } else {
+    renderUnits();
+  }
+}
+
+// 初始化
+document.getElementById('soundBtn').innerHTML = soundEnabled ? '&#128264;' : '&#128263;';
+
+// 监听网络状态
+window.addEventListener('online', () => {
+  showError('✅ 网络已连接', 2000);
+});
+
+window.addEventListener('offline', () => {
+  showError('📡 网络已断开', 3000);
+});
+
+// 初始化应用
+renderUnits();
+</script>
+</body>
+</html>

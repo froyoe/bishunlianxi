@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>写字小课堂</title>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" id="backBtn" onclick="goBack()">&#8592;</button>
+  <h1 id="headerTitle">&#9997;&#65039; 写字小课堂</h1>
+  <button class="sound-btn" id="soundBtn" onclick="toggleSound()">&#128264;</button>
+  <button class="home-btn" id="homeBtn" onclick="renderUnits()">&#127968;</button>
+</div>
+
+<div class="container" id="mainContainer">
+  <div id="unitList"></div>
+
+  <div id="charPage" class="page-hidden"></div>
+
+  <div class="practice-page page-hidden" id="practicePage">
+    <div class="practice-header" id="practiceHeader"></div>
+    <div class="writer-wrap" id="writerWrap">
+      <div class="tian-grid"></div>
+      <svg class="tian-diag" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0" y1="0" x2="100" y2="100" stroke="#e8e8e8" stroke-width="0.5" stroke-dasharray="3,3"/>
+        <line x1="100" y1="0" x2="0" y2="100" stroke="#e8e8e8" stroke-width="0.5" stroke-dasharray="3,3"/>
+      </svg>
+      <div id="writerTarget"></div>
+    </div>
+    <div class="feedback-area" id="feedbackArea"></div>
+    <div class="stats-stars" id="statsStars"></div>
+    <div class="btn-row" id="practiceButtons"></div>
+  </div>
+
+  <div class="summary-page page-hidden" id="summaryPage"></div>
+</div>
+<div class="bottom-safe"></div>
+
+<!-- Scripts loaded in dependency order -->
+<script src="js/state.js"></script>
+<script src="js/data-content.js"></script>
+<script src="js/stroke-data-official.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/stroke-utils.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
