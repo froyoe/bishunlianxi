@@ -110,6 +110,8 @@ function renderPracticeButtons(state) {
   
   if (state === 'init') {
     el.innerHTML = `<button class="btn btn-primary btn-small" onclick="playAnimation()">&#128065; 再看一遍</button>`;
+  } else if (state === 'animating') {
+    el.innerHTML = `<button class="btn btn-success btn-small" onclick="skipToQuiz()">&#9197; 跳过，我来写！</button>`;
   } else if (state === 'ready') {
     el.innerHTML = `
       <button class="btn btn-success" onclick="startQuiz()">&#9997;&#65039; 我来写！</button>

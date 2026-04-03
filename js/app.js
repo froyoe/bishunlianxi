@@ -44,8 +44,10 @@ async function openPractice(ch) {
     showHintAfterMisses: 2,
     highlightOnComplete: true,
     highlightColor: '#52c41a',
+    leniency: 1.2,
   });
 
+  renderPracticeButtons('animating');
   setTimeout(() => {
     if (currentChar !== ch) return;
     animateWithStrokeNames();
@@ -83,12 +85,24 @@ function animateWithStrokeNames() {
   });
 }
 
+function skipToQuiz() {
+  if (!writer) return;
+  SFX.tap();
+  clearStrokeSpeech();
+  writer.cancelQuiz();
+  writer.hideCharacter();
+  document.getElementById('feedbackArea').innerHTML =
+    '<div class="feedback-text hint">&#128221; 用手指按顺序写吧！</div>';
+  renderPracticeButtons('ready');
+}
+
 function playAnimation() {
   if (!writer) return;
   SFX.tap();
   quizActive = false;
   speak(currentChar, 0.7);
   document.getElementById('feedbackArea').innerHTML = '<div class="feedback-text hint">&#128064; 仔细看哦…</div>';
+  renderPracticeButtons('animating');
   writer.hideCharacter();
   setTimeout(() => animateWithStrokeNames(), 700);
 }
@@ -203,6 +217,16 @@ function goBack() {
     renderUnits();
   }
 }
+
+// 防止iPad上触摸写字时页面滚动
+document.getElementById('writerWrap').addEventListener('touchmove', function(e) {
+  e.preventDefault();
+}, { passive: false });
+document.getElementById('practicePage').addEventListener('touchmove', function(e) {
+  if (e.target.closest('#writerWrap')) {
+    e.preventDefault();
+  }
+}, { passive: false });
 
 // 初始化监听
 window.addEventListener('online', () => showError('✅ 网络已连接', 2000));
